@@ -99,7 +99,7 @@ function parseBlock(text) {
 }
 
 function makePart(title, diff, fixedLabel) {
-  if (fixedLabel) {
+  if (fixedLabel !== undefined) {
     return {
       title,
       text: fixedLabel,
@@ -149,7 +149,6 @@ function compareNumberStat(name, charStat, targetStat) {
   const tMin = targetStat.min;
   const tMax = targetStat.max;
 
-  // 고정값 vs 고정값
   if (charStat.type === "fixed" && targetStat.type === "fixed") {
     const valuePart = makePart("값", cMin - tMin);
 
@@ -161,7 +160,6 @@ function compareNumberStat(name, charStat, targetStat) {
     };
   }
 
-  // 범위값 vs 고정값
   if (charStat.type === "range" && targetStat.type === "fixed") {
     const minPart = makePart("최소", cMin - tMin);
     const maxPart = makePart("최대", cMax - tMin);
@@ -181,7 +179,6 @@ function compareNumberStat(name, charStat, targetStat) {
     };
   }
 
-  // 고정값 vs 범위값
   if (charStat.type === "fixed" && targetStat.type === "range") {
     const minPart = makePart("기준 최소 대비", cMin - tMin);
     const maxPart = makePart("기준 최대 대비", cMin - tMax);
@@ -201,7 +198,6 @@ function compareNumberStat(name, charStat, targetStat) {
     };
   }
 
-  // 범위값 vs 범위값
   const minPart = makePart("최소", cMin - tMin);
   const maxPart = makePart("최대", cMax - tMax);
 
