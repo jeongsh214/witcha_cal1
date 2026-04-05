@@ -98,6 +98,38 @@ function parseBlock(text) {
   return parsed;
 }
 
+function makePart(title, diff, fixedLabel) {
+  if (fixedLabel) {
+    return {
+      title,
+      text: fixedLabel,
+      className: fixedLabel === "동일" ? "equal" : "under"
+    };
+  }
+
+  if (diff > 0) {
+    return {
+      title,
+      text: `${diff} 초과`,
+      className: "over"
+    };
+  }
+
+  if (diff < 0) {
+    return {
+      title,
+      text: `${Math.abs(diff)} 미달`,
+      className: "under"
+    };
+  }
+
+  return {
+    title,
+    text: "동일",
+    className: "equal"
+  };
+}
+
 function compareTextStat(name, charStat, targetStat) {
   const same = charStat.raw === targetStat.raw;
 
@@ -106,11 +138,7 @@ function compareTextStat(name, charStat, targetStat) {
     status: same ? "equal" : "under",
     detail: `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`,
     parts: [
-      {
-        title: "값",
-        text: same ? "동일" : "불일치",
-        className: same ? "equal" : "under"
-      }
+      makePart("값", null, same ? "동일" : "불일치")
     ]
   };
 }
@@ -121,41 +149,27 @@ function compareNumberStat(name, charStat, targetStat) {
   const tMin = targetStat.min;
   const tMax = targetStat.max;
 
-  function getDiffInfo(diff) {
-    if (diff > 0) {
-      return { text: `${diff} 초과`, className: "over" };
-    }
-    if (diff < 0) {
-      return { text: `${Math.abs(diff)} 미달`, className: "under" };
-    }
-    return { text: "동일", className: "equal" };
-  }
-
+  // 고정값 vs 고정값
   if (charStat.type === "fixed" && targetStat.type === "fixed") {
-    const info = getDiffInfo(cMin - tMin);
+    const valuePart = makePart("값", cMin - tMin);
 
     return {
       name,
-      status: info.className,
+      status: valuePart.className,
       detail: `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`,
-      parts: [
-        {
-          title: "값",
-          text: info.text,
-          className: info.className
-        }
-      ]
+      parts: [valuePart]
     };
   }
 
+  // 범위값 vs 고정값
   if (charStat.type === "range" && targetStat.type === "fixed") {
-    const minInfo = getDiffInfo(cMin - tMin);
-    const maxInfo = getDiffInfo(cMax - tMin);
+    const minPart = makePart("최소", cMin - tMin);
+    const maxPart = makePart("최대", cMax - tMin);
 
     let status = "equal";
-    if (minInfo.className === "under" || maxInfo.className === "under") {
+    if (minPart.className === "under" || maxPart.className === "under") {
       status = "under";
-    } else if (minInfo.className === "over" || maxInfo.className === "over") {
+    } else if (minPart.className === "over" || maxPart.className === "over") {
       status = "over";
     }
 
@@ -163,28 +177,38 @@ function compareNumberStat(name, charStat, targetStat) {
       name,
       status,
       detail: `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`,
-      parts: [
-        {
-          title: "최소",
-          text: minInfo.text,
-          className: minInfo.className
-        },
-        {
-          title: "최대",
-          text: maxInfo.text,
-          className: maxInfo.className
-        }
-      ]
+      parts: [minPart, maxPart]
     };
   }
 
-  const minInfo = getDiffInfo(cMin - tMin);
-  const maxInfo = getDiffInfo(cMax - tMax);
+  // 고정값 vs 범위값
+  if (charStat.type === "fixed" && targetStat.type === "range") {
+    const minPart = makePart("기준 최소 대비", cMin - tMin);
+    const maxPart = makePart("기준 최대 대비", cMin - tMax);
+
+    let status = "equal";
+    if (minPart.className === "under" || maxPart.className === "under") {
+      status = "under";
+    } else if (minPart.className === "over" || maxPart.className === "over") {
+      status = "over";
+    }
+
+    return {
+      name,
+      status,
+      detail: `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`,
+      parts: [minPart, maxPart]
+    };
+  }
+
+  // 범위값 vs 범위값
+  const minPart = makePart("최소", cMin - tMin);
+  const maxPart = makePart("최대", cMax - tMax);
 
   let status = "equal";
-  if (minInfo.className === "under" || maxInfo.className === "under") {
+  if (minPart.className === "under" || maxPart.className === "under") {
     status = "under";
-  } else if (minInfo.className === "over" || maxInfo.className === "over") {
+  } else if (minPart.className === "over" || maxPart.className === "over") {
     status = "over";
   }
 
@@ -192,18 +216,7 @@ function compareNumberStat(name, charStat, targetStat) {
     name,
     status,
     detail: `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`,
-    parts: [
-      {
-        title: "최소",
-        text: minInfo.text,
-        className: minInfo.className
-      },
-      {
-        title: "최대",
-        text: maxInfo.text,
-        className: maxInfo.className
-      }
-    ]
+    parts: [minPart, maxPart]
   };
 }
 
@@ -319,8 +332,12 @@ function renderResults(character, target, results) {
         <div class="mini-value">${underCount}</div>
       </div>
       <div class="mini-box">
-        <div class="mini-label">동일 / 누락</div>
-        <div class="mini-value">${equalCount + warnCount}</div>
+        <div class="mini-label">동일</div>
+        <div class="mini-value">${equalCount}</div>
+      </div>
+      <div class="mini-box">
+        <div class="mini-label">누락</div>
+        <div class="mini-value">${warnCount}</div>
       </div>
     </div>
 
@@ -347,16 +364,23 @@ const compareBtn = document.getElementById("compareBtn");
 const sampleBtn = document.getElementById("sampleBtn");
 const clearBtn = document.getElementById("clearBtn");
 
-compareBtn.addEventListener("click", () => {
-  const character = parseBlock(characterInput.value);
-  const target = parseBlock(targetInput.value);
-  const results = compareBlocks(character, target);
+if (compareBtn) {
+  compareBtn.addEventListener("click", () => {
+    if (!characterInput || !targetInput || !resultArea) return;
 
-  resultArea.innerHTML = renderResults(character, target, results);
-});
+    const character = parseBlock(characterInput.value);
+    const target = parseBlock(targetInput.value);
+    const results = compareBlocks(character, target);
 
-sampleBtn.addEventListener("click", () => {
-  characterInput.value = `캐릭터 스텟
+    resultArea.innerHTML = renderResults(character, target, results);
+  });
+}
+
+if (sampleBtn) {
+  sampleBtn.addEventListener("click", () => {
+    if (!characterInput || !targetInput || !resultArea) return;
+
+    characterInput.value = `캐릭터 스텟
 등급\t차원표류
 체력\t310
 공격력\t28
@@ -365,7 +389,7 @@ sampleBtn.addEventListener("click", () => {
 명중률\t100
 민첩\t4~7`;
 
-  targetInput.value = `기준 스텟
+    targetInput.value = `기준 스텟
 등급\t차원표류
 체력\t300
 공격력\t30
@@ -374,11 +398,16 @@ sampleBtn.addEventListener("click", () => {
 명중률\t100
 민첩\t5`;
 
-  resultArea.innerHTML = '<div class="empty">샘플을 넣었다. 비교하기를 누르면 결과가 나온다.</div>';
-});
+    resultArea.innerHTML = '<div class="empty">샘플을 넣었다. 비교하기를 누르면 결과가 나온다.</div>';
+  });
+}
 
-clearBtn.addEventListener("click", () => {
-  characterInput.value = "";
-  targetInput.value = "";
-  resultArea.innerHTML = '<div class="empty">입력창을 비웠다.</div>';
-});
+if (clearBtn) {
+  clearBtn.addEventListener("click", () => {
+    if (!characterInput || !targetInput || !resultArea) return;
+
+    characterInput.value = "";
+    targetInput.value = "";
+    resultArea.innerHTML = '<div class="empty">입력창을 비웠다.</div>';
+  });
+}
