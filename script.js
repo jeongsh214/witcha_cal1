@@ -98,6 +98,66 @@ function parseBlock(text) {
   return parsed;
 }
 
+function parseCsvLine(line) {
+  return line.split(",").map(v => v.trim());
+}
+
+function parseCsvText(csvText) {
+  const lines = String(csvText)
+    .split("\n")
+    .map(line => line.replace(/\r/g, "").trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    return {};
+  }
+
+  const headers = parseCsvLine(lines[0]);
+  const result = {};
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCsvLine(lines[i]);
+    const grade = cols[0];
+
+    if (!grade) continue;
+
+    const fields = {
+      등급: {
+        type: "text",
+        raw: grade,
+        min: null,
+        max: null
+      }
+    };
+
+    for (let j = 1; j < headers.length; j++) {
+      const key = normalizeKey(headers[j]);
+      const value = cols[j] ?? "";
+
+      if (!value) continue;
+      fields[key] = parseValue(value);
+    }
+
+    result[grade] = {
+      title: `${grade} 기준 스텟`,
+      fields
+    };
+  }
+
+  return result;
+}
+
+async function loadTargetStats() {
+  const response = await fetch("./target-stats.csv", { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error("기준 CSV 파일을 불러오지 못했다.");
+  }
+
+  const csvText = await response.text();
+  return parseCsvText(csvText);
+}
+
 function makePart(title, diff, fixedLabel) {
   if (fixedLabel !== undefined) {
     return {
@@ -247,7 +307,7 @@ function compareBlocks(character, target) {
       results.push({
         name: key,
         status: "warn",
-        detail: `기준 입력에 ${key} 항목이 없다.`,
+        detail: `기준 데이터에 ${key} 항목이 없다.`,
         parts: [
           {
             title: "상태",
@@ -353,28 +413,49 @@ function renderResults(character, target, results) {
   `;
 }
 
+function getCharacterGrade(character) {
+  const gradeField = character.fields["등급"];
+  return gradeField ? String(gradeField.raw).trim() : "";
+}
+
 const characterInput = document.getElementById("characterInput");
-const targetInput = document.getElementById("targetInput");
 const resultArea = document.getElementById("resultArea");
 const compareBtn = document.getElementById("compareBtn");
 const sampleBtn = document.getElementById("sampleBtn");
 const clearBtn = document.getElementById("clearBtn");
 
 if (compareBtn) {
-  compareBtn.addEventListener("click", () => {
-    if (!characterInput || !targetInput || !resultArea) return;
+  compareBtn.addEventListener("click", async () => {
+    if (!characterInput || !resultArea) return;
 
-    const character = parseBlock(characterInput.value);
-    const target = parseBlock(targetInput.value);
-    const results = compareBlocks(character, target);
+    try {
+      const character = parseBlock(characterInput.value);
+      const grade = getCharacterGrade(character);
 
-    resultArea.innerHTML = renderResults(character, target, results);
+      if (!grade) {
+        resultArea.innerHTML = '<div class="empty">입력값에서 등급 항목을 찾지 못했다.</div>';
+        return;
+      }
+
+      const allTargets = await loadTargetStats();
+      const target = allTargets[grade];
+
+      if (!target) {
+        resultArea.innerHTML = `<div class="empty">기준 CSV에서 "${grade}" 등급을 찾지 못했다.</div>`;
+        return;
+      }
+
+      const results = compareBlocks(character, target);
+      resultArea.innerHTML = renderResults(character, target, results);
+    } catch (error) {
+      resultArea.innerHTML = `<div class="empty">${error.message}</div>`;
+    }
   });
 }
 
 if (sampleBtn) {
   sampleBtn.addEventListener("click", () => {
-    if (!characterInput || !targetInput || !resultArea) return;
+    if (!characterInput || !resultArea) return;
 
     characterInput.value = `캐릭터 스텟
 등급\t차원표류
@@ -385,25 +466,15 @@ if (sampleBtn) {
 명중률\t100
 민첩\t4~7`;
 
-    targetInput.value = `기준 스텟
-등급\t차원표류
-체력\t300
-공격력\t30
-방어력\t10
-치명타 확률\t12
-명중률\t100
-민첩\t5`;
-
     resultArea.innerHTML = '<div class="empty">샘플을 넣었다. 비교하기를 누르면 결과가 나온다.</div>';
   });
 }
 
 if (clearBtn) {
   clearBtn.addEventListener("click", () => {
-    if (!characterInput || !targetInput || !resultArea) return;
+    if (!characterInput || !resultArea) return;
 
     characterInput.value = "";
-    targetInput.value = "";
     resultArea.innerHTML = '<div class="empty">입력창을 비웠다.</div>';
   });
 }
