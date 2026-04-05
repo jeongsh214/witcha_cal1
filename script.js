@@ -14,6 +14,8 @@ const CHARACTER_HEADERS = [
   "민첩",
   "기각여부"
 ];
+const uploadCharactersBtn = document.getElementById("uploadCharactersBtn");
+const uploadCharactersInput = document.getElementById("uploadCharactersInput");
 
 function normalizeKey(key) {
   return String(key).replace(/\s+/g, " ").trim();
@@ -991,5 +993,53 @@ if (clearBtn) {
     characterInput.value = "";
     latestRenderData = null;
     resultArea.innerHTML = '<div class="empty">입력창을 비웠다.</div>';
+  });
+}
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("업로드한 파일을 읽지 못했다."));
+
+    reader.readAsText(file, "utf-8");
+  });
+}
+async function uploadCharactersCsvFile(file) {
+  if (!file) return;
+
+  try {
+    const text = await readFileAsText(file);
+    const rows = parseCharactersCsv(text);
+
+    if (!rows.length) {
+      if (resultArea) {
+        resultArea.innerHTML = '<div class="empty">업로드한 CSV에 불러올 캐릭터가 없다.</div>';
+      }
+      return;
+    }
+
+    characterRows = rows;
+    renderCharacterList();
+
+    if (resultArea) {
+      resultArea.innerHTML = `<div class="empty">CSV 업로드를 완료했다. 총 ${rows.length}명의 캐릭터를 불러왔다.</div>`;
+    }
+  } catch (error) {
+    if (resultArea) {
+      resultArea.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+    }
+  }
+}
+if (uploadCharactersBtn && uploadCharactersInput) {
+  uploadCharactersBtn.addEventListener("click", () => {
+    uploadCharactersInput.click();
+  });
+
+  uploadCharactersInput.addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+    await uploadCharactersCsvFile(file);
+
+    event.target.value = "";
   });
 }
