@@ -18,10 +18,41 @@
       숫자는 고정값으로 처리하고, <strong>~</strong>가 들어가면 범위값으로 처리한다.
     </p>
 
+    <div class="card character-manager">
+      <div class="manager-header">
+        <div>
+          <h2>캐릭터 목록</h2>
+          <p class="manager-desc">
+            characters.csv를 불러와 목록을 관리한다. 상태 변경과 삭제는 현재 페이지 목록에 반영되며,
+            다운로드한 CSV를 GitHub에 덮어쓰면 공유된다.
+          </p>
+        </div>
+
+        <div class="manager-actions">
+          <button class="secondary" id="reloadCharactersBtn" type="button">CSV 다시 불러오기</button>
+          <button class="secondary" id="downloadCharactersBtn" type="button">CSV 다운로드</button>
+        </div>
+      </div>
+
+      <div class="bulk-actions">
+        <button class="secondary" id="selectAllBtn" type="button">전체 선택</button>
+        <button class="secondary" id="clearSelectionBtn" type="button">전체 해제</button>
+        <button class="secondary" id="selectReviewedBtn" type="button">심사 완료 전체 선택</button>
+        <button class="secondary danger-soft" id="deleteSelectedBtn" type="button">선택 항목 삭제</button>
+      </div>
+
+      <div id="characterListInfo" class="list-info">목록을 불러오는 중...</div>
+
+      <div id="characterList" class="character-list">
+        <div class="empty">목록을 불러오는 중...</div>
+      </div>
+    </div>
+
     <div class="grid">
       <div class="card">
         <h2>캐릭터 입력</h2>
         <textarea id="characterInput">캐릭터 스텟
+이름	테스트캐릭
 등급	차원표류
 체력	310
 공격력	28
@@ -34,6 +65,7 @@
           <button class="primary" id="compareBtn">비교하기</button>
           <button class="secondary" id="sampleBtn">샘플 넣기</button>
           <button class="secondary" id="clearBtn">초기화</button>
+          <button class="secondary" id="addComparedCharacterBtn" type="button">현재 비교 캐릭터 목록에 추가</button>
         </div>
 
         <div class="parsed-box">
@@ -44,6 +76,7 @@
           <div class="parsed-line">- 예: <strong>4~7</strong> 은 최소 4, 최대 7로 처리한다.</div>
           <div class="parsed-line">- 범위값은 최소/최대를 각각 따로 비교해 색도 따로 표시한다.</div>
           <div class="parsed-line">- 기준값은 같은 폴더의 CSV 파일에서 자동으로 불러온다.</div>
+          <div class="parsed-line">- 캐릭터 목록 저장용 CSV 구조는 <strong>이름,등급,체력,공격력,방어력,치명타 확률,명중률,민첩,기각여부</strong> 이다.</div>
         </div>
       </div>
 
