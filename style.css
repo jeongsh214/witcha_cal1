@@ -165,22 +165,32 @@ button {
 
 .over {
   background: #e8f0ff;
-  color: #2f6fff; /* 파랑 */
+  color: #2f6fff;
 }
 
 .under {
   background: #ffecec;
-  color: #d93025; /* 빨강 */
+  color: #d93025;
 }
 
 .equal {
   background: #e8f9ef;
-  color: #1d7c41; /* 초록 */
+  color: #1d7c41;
 }
 
 .warn {
   background: #fff8e8;
   color: #9a6a00;
+}
+
+.text-match {
+  background: #e8f9ef;
+  color: #1d7c41;
+}
+
+.text-mismatch {
+  background: #ffecec;
+  color: #d93025;
 }
 
 .stat-detail {

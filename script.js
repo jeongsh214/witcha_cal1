@@ -151,48 +151,19 @@ function compareTextStat(name, charStat, targetStat) {
 
   return {
     name,
-    status: same ? "match" : "mismatch",
-    label: same ? "일치" : "불일치",
+    status: same ? "text-match" : "text-mismatch",
+    label: same ? "동일" : "불일치",
     detail: `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`
-  };
-}
-
-function compareFixedVsRange(name, charStat, targetStat) {
-  const target = targetStat.min;
-  const minOk = charStat.min >= target;
-  const maxOk = charStat.max >= target;
-
-  let label = "충족";
-  let status = "pass";
-  let detail = `캐릭터: ${charStat.raw} / 기준: ${targetStat.raw}`;
-
-  if (!minOk && !maxOk) {
-    label = "부족";
-    status = "fail";
-    detail += ` / 최소값 ${target - charStat.min} 부족, 최대값 ${target - charStat.max} 부족`;
-  } else if (!minOk && maxOk) {
-    label = "부분 충족";
-    status = "warn";
-    detail += ` / 최소값 ${target - charStat.min} 부족, 최대값은 충족`;
-  }
-
-  return {
-    name,
-    status,
-    label,
-    detail
   };
 }
 
 function compareNumberStat(name, charStat, targetStat) {
   const cMin = charStat.min;
   const cMax = charStat.max;
-  const tMin = targetStat.min;
-  const tMax = targetStat.max;
+  const tValue = targetStat.min;
 
-  // 단일값 vs 단일값
   if (charStat.type === "fixed" && targetStat.type === "fixed") {
-    const diff = cMin - tMin;
+    const diff = cMin - tValue;
 
     let label = "동일";
     let status = "equal";
@@ -213,10 +184,9 @@ function compareNumberStat(name, charStat, targetStat) {
     };
   }
 
-  // 범위 vs 단일값
   if (charStat.type === "range" && targetStat.type === "fixed") {
-    const minDiff = cMin - tMin;
-    const maxDiff = cMax - tMin;
+    const minDiff = cMin - tValue;
+    const maxDiff = cMax - tValue;
 
     const minText = minDiff === 0
       ? "최소 동일"
@@ -231,8 +201,11 @@ function compareNumberStat(name, charStat, targetStat) {
         : `최대 ${Math.abs(maxDiff)} 미달`;
 
     let status = "equal";
-    if (minDiff < 0 || maxDiff < 0) status = "under";
-    else if (minDiff > 0 || maxDiff > 0) status = "over";
+    if (minDiff < 0 || maxDiff < 0) {
+      status = "under";
+    } else if (minDiff > 0 || maxDiff > 0) {
+      status = "over";
+    }
 
     return {
       name,
@@ -242,7 +215,9 @@ function compareNumberStat(name, charStat, targetStat) {
     };
   }
 
-  // 범위 vs 범위 (확장 대비)
+  const tMin = targetStat.min;
+  const tMax = targetStat.max;
+
   const minDiff = cMin - tMin;
   const maxDiff = cMax - tMax;
 
@@ -259,8 +234,11 @@ function compareNumberStat(name, charStat, targetStat) {
       : `최대 ${Math.abs(maxDiff)} 미달`;
 
   let status = "equal";
-  if (minDiff < 0 || maxDiff < 0) status = "under";
-  else if (minDiff > 0 || maxDiff > 0) status = "over";
+  if (minDiff < 0 || maxDiff < 0) {
+    status = "under";
+  } else if (minDiff > 0 || maxDiff > 0) {
+    status = "over";
+  }
 
   return {
     name,
@@ -316,6 +294,8 @@ function getBadgeClass(status) {
   if (status === "over") return "badge over";
   if (status === "under") return "badge under";
   if (status === "equal") return "badge equal";
+  if (status === "text-match") return "badge text-match";
+  if (status === "text-mismatch") return "badge text-mismatch";
   return "badge warn";
 }
 
@@ -342,9 +322,10 @@ function renderParsed(parsed) {
 }
 
 function renderResults(character, target, results) {
-  const passCount = results.filter(r => r.status === "pass" || r.status === "match").length;
-  const failCount = results.filter(r => r.status === "fail" || r.status === "mismatch").length;
-  const warnCount = results.filter(r => r.status === "warn").length;
+  const overCount = results.filter(r => r.status === "over").length;
+  const underCount = results.filter(r => r.status === "under").length;
+  const equalCount = results.filter(r => r.status === "equal" || r.status === "text-match").length;
+  const warnCount = results.filter(r => r.status === "warn" || r.status === "text-mismatch").length;
 
   const resultHtml = results.map(item => `
     <div class="result-item">
@@ -359,16 +340,16 @@ function renderResults(character, target, results) {
   return `
     <div class="summary">
       <div class="mini-box">
-        <div class="mini-label">충족 / 일치</div>
-        <div class="mini-value">${passCount}</div>
+        <div class="mini-label">초과</div>
+        <div class="mini-value">${overCount}</div>
       </div>
       <div class="mini-box">
-        <div class="mini-label">부족 / 불일치</div>
-        <div class="mini-value">${failCount}</div>
+        <div class="mini-label">미달</div>
+        <div class="mini-value">${underCount}</div>
       </div>
       <div class="mini-box">
-        <div class="mini-label">부분 충족 / 누락</div>
-        <div class="mini-value">${warnCount}</div>
+        <div class="mini-label">동일 / 기타</div>
+        <div class="mini-value">${equalCount + warnCount}</div>
       </div>
     </div>
 
